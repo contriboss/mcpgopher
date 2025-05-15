@@ -3,12 +3,15 @@ BIN_DIR := bin
 
 EXAMPLES := http_client_example
 
-.PHONY: all examples clean lint
+.PHONY: all examples clean lint test
 
 all: examples lint
 
 lint:
 	golangci-lint run ./...
+
+test:
+	go test ./...
 
 examples: $(EXAMPLES:%=$(BIN_DIR)/%)
 
