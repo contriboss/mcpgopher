@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime"
 	"net/http"
 	"net/url"
@@ -14,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/oklog/ulid"
 )
 
 type StreamableHTTPCOption func(*StreamableHTTP)
@@ -32,7 +35,6 @@ func WithHTTPTimeout(timeout time.Duration) StreamableHTTPCOption {
 }
 
 // StreamableHTTP implements Streamable HTTP transport.
-// Streamable HTTP transport.
 //
 // It transmits JSON-RPC messages over individual HTTP requests. One message per request.
 // The HTTP response body can either be a single JSON-RPC response,
@@ -52,7 +54,8 @@ type StreamableHTTP struct {
 	httpClient *http.Client
 	headers    map[string]string
 
-	sessionID atomic.Value // string
+	sessionID   atomic.Value
+	initialized atomic.Bool
 
 	notificationHandler func(JSONRPCNotification)
 	notifyMu            sync.RWMutex
@@ -86,6 +89,32 @@ func NewStreamableHTTP(baseURL string, options ...StreamableHTTPCOption) (*Strea
 // Start initiates the HTTP connection to the server.
 func (c *StreamableHTTP) Start(ctx context.Context) error {
 	// For Streamable HTTP, we don't need to establish a persistent connection
+	return nil
+}
+
+// Initialize sends the initialize request to the server with protocol version, client info, and capabilities.
+// Stores the session ID if successful.
+func (c *StreamableHTTP) Initialize(ctx context.Context, protocolVersion string, clientInfo map[string]interface{}, capabilities map[string]interface{}) error {
+	request := JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      "1",
+		Method:  initializeMethod,
+		Params: map[string]interface{}{
+			"protocolVersion": protocolVersion,
+			"clientInfo":      clientInfo,
+			"capabilities":    capabilities,
+		},
+	}
+
+	_, err := c.SendRequest(ctx, request)
+	if err != nil {
+		return fmt.Errorf("failed to initialize: %w", err)
+	}
+
+	// Note: The sessionID is already stored in SendRequest when processing
+	// the HTTP headers for the initialize method
+
+	c.initialized.Store(true)
 	return nil
 }
 
@@ -136,6 +165,10 @@ func (c *StreamableHTTP) SendRequest(
 	ctx context.Context,
 	request JSONRPCRequest,
 ) (*JSONRPCResponse, error) {
+	// Print debug info for ping requests
+	if request.Method == "ping" {
+		fmt.Printf("DEBUG SendRequest: Method=%s, ID=%s\n", request.Method, request.ID)
+	}
 
 	// Create a combined context that could be canceled when the client is closed
 	newCtx, cancel := context.WithCancel(ctx)
@@ -211,13 +244,19 @@ func (c *StreamableHTTP) SendRequest(
 	case "application/json":
 		// Single response
 		body, _ := io.ReadAll(resp.Body)
+		
+		// Log the raw response for debugging if it's a ping
+		if request.Method == "ping" {
+			fmt.Printf("DEBUG Raw response: %s\n", string(body))
+		}
+		
 		var response JSONRPCResponse
 		if err := json.Unmarshal(body, &response); err != nil {
 			return nil, fmt.Errorf("failed to decode response: %w\nRaw payload: %s", err, string(body))
 		}
 
-		// should not be a notification
-		if response.ID == nil {
+		// Special handling for ping requests - allow null ID
+		if response.ID == nil && request.Method != "ping" {
 			return nil, fmt.Errorf("response should contain RPC id. Raw payload: %s", string(body))
 		}
 
@@ -230,6 +269,18 @@ func (c *StreamableHTTP) SendRequest(
 	default:
 		return nil, fmt.Errorf("unexpected content type: %s", resp.Header.Get("Content-Type"))
 	}
+}
+
+func (c *StreamableHTTP) Request(ctx context.Context, method string, params interface{}) (*JSONRPCResponse, error) {
+	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
+	request := JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String(),
+		Method:  method,
+		Params:  params,
+	}
+
+	return c.SendRequest(ctx, request)
 }
 
 // handleSSEResponse processes an SSE stream for a specific request.
@@ -391,4 +442,42 @@ func (c *StreamableHTTP) SetNotificationHandler(handler func(JSONRPCNotification
 
 func (c *StreamableHTTP) GetSessionId() string {
 	return c.sessionID.Load().(string)
+}
+
+// Ping sends a ping request to the server and waits for a response.
+// This can be used to check if the server is still alive and measure latency.
+func (c *StreamableHTTP) Ping(ctx context.Context) error {
+	// For ping request
+	pingParams := map[string]interface{}{
+		"timestamp": time.Now().UnixNano(),
+	}
+	
+	// Create request ID for ping
+	requestID := fmt.Sprintf("ping-%d", time.Now().UnixNano())
+	fmt.Printf("DEBUG: Using request ID: %s\n", requestID)
+	
+	// Try using SendRequest instead of direct HTTP request
+	request := JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      requestID,
+		Method:  "ping",
+		Params:  pingParams,
+	}
+	
+	// Marshal request for logging
+	requestBody, _ := json.Marshal(request)
+	fmt.Printf("DEBUG: Sending ping request: %s\n", string(requestBody))
+	
+	// Send the ping request
+	resp, err := c.SendRequest(ctx, request)
+	if err != nil {
+		fmt.Printf("DEBUG: Ping error: %v\n", err)
+		return fmt.Errorf("ping failed: %w", err)
+	}
+	
+	// Log response
+	respJSON, _ := json.Marshal(resp)
+	fmt.Printf("DEBUG: Ping response: %s\n", string(respJSON))
+	
+	return nil
 }

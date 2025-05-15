@@ -43,8 +43,28 @@ func main() {
 	}
 	fmt.Printf("Connection initialized with protocol version 2025-03-26. Session ID: %s\n", mcp.GetSessionID())
 
-	// Make a ping request (supported by MCP spec)
+	// List available tools before ping
+	fmt.Println("Listing available tools...")
+	raw, err := mcp.RawRequest(ctx, "tools/list", map[string]interface{}{})
+	if err != nil {
+		fmt.Printf("tools/list request failed: %v\n", err)
+	} else {
+		fmt.Printf("tools/list full envelope: %s\n", string(raw))
+	}
+
+	// Make a ping request using the dedicated Ping method
 	fmt.Println("Sending ping request...")
+	startTime := time.Now()
+	err = mcp.Ping(ctx)
+	pingDuration := time.Since(startTime)
+	if err != nil {
+		fmt.Printf("Ping request failed: %v\n", err)
+	} else {
+		fmt.Printf("Ping successful! Response time: %s\n", pingDuration)
+	}
+
+	// Also make a ping request using the generic Request method to see full response data
+	fmt.Println("Sending ping request with Request method...")
 	result, err := mcp.Request(ctx, "ping", nil)
 	if err != nil {
 		fmt.Printf("Ping request failed: %v\n", err)

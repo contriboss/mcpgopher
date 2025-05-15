@@ -10,6 +10,9 @@ type Interface interface {
 	// Start the connection. Start should only be called once.
 	Start(ctx context.Context) error
 
+	// Initialize the transport with protocol version, client info, and capabilities.
+	Initialize(ctx context.Context, protocolVersion string, clientInfo map[string]interface{}, capabilities map[string]interface{}) error
+
 	// SendRequest sends a json RPC request and returns the response synchronously.
 	SendRequest(ctx context.Context, request JSONRPCRequest) (*JSONRPCResponse, error)
 
@@ -20,20 +23,24 @@ type Interface interface {
 	// Any notification before the handler is set will be discarded.
 	SetNotificationHandler(handler func(notification JSONRPCNotification))
 
+	// Ping sends a ping request to the server and waits for a response.
+	// This can be used to check if the server is still alive.
+	Ping(ctx context.Context) error
+
 	// Close the connection.
 	Close() error
 }
 
 type JSONRPCRequest struct {
 	JSONRPC string `json:"jsonrpc"`
-	ID      int64  `json:"id"`
+	ID      string `json:"id"`
 	Method  string `json:"method"`
 	Params  any    `json:"params,omitempty"`
 }
 
 type JSONRPCResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
-	ID      *int64          `json:"id"`
+	ID      *string         `json:"id"`
 	Result  json.RawMessage `json:"result"`
 	Error   *struct {
 		Code    int             `json:"code"`
@@ -62,7 +69,7 @@ func (n *JSONRPCNotification) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	
+
 	if len(aux.Params) > 0 {
 		var additionalFields map[string]interface{}
 		if err := json.Unmarshal(aux.Params, &additionalFields); err != nil {
@@ -70,6 +77,6 @@ func (n *JSONRPCNotification) UnmarshalJSON(data []byte) error {
 		}
 		n.Params.AdditionalFields = additionalFields
 	}
-	
+
 	return nil
 }
