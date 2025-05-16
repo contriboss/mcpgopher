@@ -16,7 +16,7 @@ func main() {
 	// This is just to test, the final client should auto connect
 	// Create client with custom options
 	mcp, err := client.NewHTTPClient(&client.Options{
-		BaseURL: "http://localhost:62770", // Default to ActionMCP port
+		BaseURL: "https://api.cs.commonstaging.me/action_mcp", // Default to ActionMCP port
 		Headers: map[string]string{
 			"User-Agent": "mcpgopher-example/1.0",
 		},
@@ -74,6 +74,15 @@ func main() {
 		jsonStr, _ := json.MarshalIndent(prettyJSON, "", "  ")
 		fmt.Printf("Ping response: %s\n", jsonStr)
 	}
+
+	result, err = mcp.RawRequest(ctx, "tools/call", map[string]interface{}{
+		"name": "identify_company",
+		"arguments": map[string]interface{}{
+			"company_name": "ad blue",
+		},
+	})
+
+	fmt.Println(string(result))
 
 	// Wait for Ctrl+C to exit
 	fmt.Println("Press Ctrl+C to exit")
