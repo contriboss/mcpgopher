@@ -75,6 +75,15 @@ func main() {
 		fmt.Printf("Ping response: %s\n", jsonStr)
 	}
 
+	result, err = mcp.RawRequest(ctx, "tools/call", map[string]interface{}{
+		"name": "identify_company",
+		"arguments": map[string]interface{}{
+			"company_name": "ad blue",
+		},
+	})
+
+	fmt.Println(string(result))
+
 	// Wait for Ctrl+C to exit
 	fmt.Println("Press Ctrl+C to exit")
 	sigCh := make(chan os.Signal, 1)
