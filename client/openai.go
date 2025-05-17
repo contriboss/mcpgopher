@@ -6,9 +6,9 @@ import (
 )
 
 type OpenaiTool struct {
-	Name        string
-	Description string
-	Parameters  map[string]interface{}
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters"`
 }
 
 func (c *HTTPClient) OpenaiTools() ([]OpenaiTool, error) {
@@ -28,7 +28,7 @@ func (c *HTTPClient) OpenaiTools() ([]OpenaiTool, error) {
 	}
 
 	toolsRaw := data["result"].(map[string]interface{})["tools"].([]interface{})
-	
+
 	tools := []OpenaiTool{}
 	for _, toolRaw := range toolsRaw {
 		tool := OpenaiTool{}
