@@ -3,12 +3,15 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/openai/openai-go"
-	"github.com/openai/openai-go/packages/param"
 )
 
-func (c *HTTPClient) OpenaiTools() ([]openai.ChatCompletionToolParam, error) {
+type OpenaiTool struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters"`
+}
+
+func (c *HTTPClient) OpenaiTools() ([]OpenaiTool, error) {
 	ctx := context.Background()
 	err := c.Initialize(ctx)
 	if err != nil {
@@ -25,27 +28,19 @@ func (c *HTTPClient) OpenaiTools() ([]openai.ChatCompletionToolParam, error) {
 	}
 
 	toolsRaw := data["result"].(map[string]interface{})["tools"].([]interface{})
-	tools := []openai.ChatCompletionToolParam{}
-	for _, toolRaw := range toolsRaw {
-		tool := openai.ChatCompletionToolParam{}
-		toolMap := toolRaw.(map[string]interface{})
 
+	tools := []OpenaiTool{}
+	for _, toolRaw := range toolsRaw {
+		tool := OpenaiTool{}
+		toolMap := toolRaw.(map[string]interface{})
 		normalizedTool := mcpToVendor(toolMap)
-		fmt.Println(normalizedTool)
 		function := normalizedTool["function"].(map[string]interface{})
 		parameters := function["parameters"].(map[string]interface{})
-
-		//inputSchema := toolMap["inputSchema"].(map[string]interface{})
-		tool.Function.Name = toolMap["name"].(string)
-		tool.Function.Description = param.Opt[string]{
-			Value:  toolMap["description"].(string),
-			Status: 2,
-		}
-		tool.Function.Parameters = parameters
-
+		tool.Name = toolMap["name"].(string)
+		tool.Description = toolMap["description"].(string)
+		tool.Parameters = parameters
 		tools = append(tools, tool)
 	}
-
 	return tools, nil
 }
 
