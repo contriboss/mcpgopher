@@ -1,16 +1,16 @@
-package main
+package internal
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oklog/ulid"
 	"io"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type MCPClient struct {
@@ -45,8 +45,13 @@ func (c *MCPClient) GetSessionID() string {
 	return c.sessionID
 }
 
+func generateId() string {
+	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
+	return ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String()
+}
+
 func (c *MCPClient) GenerateSessionID() string {
-	sessionID := uuid.New().String()
+	sessionID := generateId()
 	c.SetSessionID(sessionID)
 	return sessionID
 }
@@ -62,7 +67,7 @@ func (c *MCPClient) SetSessionToken(token string) {
 }
 
 func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMessage, error) {
-	requestID := uuid.New().String()
+	requestID := generateId()
 
 	var paramsJSON json.RawMessage
 	if params != nil {
@@ -73,12 +78,9 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 		paramsJSON = json.RawMessage(paramsBytes)
 	}
 
-	idBytes, _ := json.Marshal(requestID)
-	idRaw := json.RawMessage(idBytes)
-
 	message := JSONRPCMessage{
 		JSONRPC: "2.0",
-		ID:      &idRaw,
+		ID:      requestID,
 		Method:  method,
 		Params:  paramsJSON,
 	}
@@ -94,7 +96,7 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Accept", "application/json")
 
 	c.mu.RLock()
 	if c.sessionToken != "" {
@@ -124,6 +126,12 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 	var response JSONRPCMessage
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	if c.sessionID == "" {
+		c.mu.RLock()
+		c.sessionID = response.ID
+		c.mu.RUnlock()
 	}
 
 	return &response, nil
@@ -218,6 +226,7 @@ func (c *MCPClient) Initialize() error {
 
 	c.mu.Lock()
 	c.serverInfo = &result.ServerInfo
+	c.sessionID = response.ID
 	c.serverCapabilities = &result.Capabilities
 	c.initialized = true
 	c.mu.Unlock()
@@ -591,7 +600,7 @@ func intPtr(i int) *int {
 	return &i
 }
 
-func float64Ptr(f float64) *float64 {
+func Float64Ptr(f float64) *float64 {
 	return &f
 }
 

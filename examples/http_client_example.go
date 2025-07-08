@@ -29,7 +29,8 @@ func main() {
 		os.Exit(1)
 	}
 	defer mcp.Close()
-
+	ddd := mcp.GetSessionID()
+	fmt.Println(ddd)
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
