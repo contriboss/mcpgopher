@@ -21,6 +21,7 @@ type MCPClient struct {
 	mu                 sync.RWMutex
 	initialized        bool
 	sessionToken       string
+	sessionID          string
 }
 
 func NewMCPClient(baseURL string) *MCPClient {
@@ -30,6 +31,24 @@ func NewMCPClient(baseURL string) *MCPClient {
 			Timeout: 30 * time.Second,
 		},
 	}
+}
+
+func (c *MCPClient) SetSessionID(sessionID string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sessionID = sessionID
+}
+
+func (c *MCPClient) GetSessionID() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.sessionID
+}
+
+func (c *MCPClient) GenerateSessionID() string {
+	sessionID := uuid.New().String()
+	c.SetSessionID(sessionID)
+	return sessionID
 }
 
 func (c *MCPClient) SetTimeout(timeout time.Duration) {
@@ -80,6 +99,10 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 	c.mu.RLock()
 	if c.sessionToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.sessionToken)
+	}
+	// Add session ID header
+	if c.sessionID != "" {
+		req.Header.Set("Mcp-Session-Id", c.sessionID)
 	}
 	c.mu.RUnlock()
 
@@ -137,6 +160,10 @@ func (c *MCPClient) sendNotification(method string, params interface{}) error {
 	c.mu.RLock()
 	if c.sessionToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.sessionToken)
+	}
+	// Add session ID header
+	if c.sessionID != "" {
+		req.Header.Set("Mcp-Session-Id", c.sessionID)
 	}
 	c.mu.RUnlock()
 

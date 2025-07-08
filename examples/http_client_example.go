@@ -16,7 +16,7 @@ func main() {
 	// This is just to test, the final client should auto connect
 	// Create client with custom options
 	mcp, err := client.NewHTTPClient(&client.Options{
-		BaseURL: "http://194.35.120.23:3001/mcp", // Default to ActionMCP port
+		BaseURL: "http://127.0.0.1:62770", // Default to ActionMCP port
 		Headers: map[string]string{
 			"User-Agent": "mcpgopher-example/1.0",
 		},

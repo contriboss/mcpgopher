@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// Create client
-	client := NewMCPClient("http://194.35.120.23:3001/mcp")
+	client := NewMCPClient("http://127.0.0.1:62770")
 
 	// Set timeout
 	client.SetTimeout(60 * time.Second)
