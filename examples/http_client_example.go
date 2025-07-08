@@ -16,7 +16,7 @@ func main() {
 	// This is just to test, the final client should auto connect
 	// Create client with custom options
 	mcp, err := client.NewHTTPClient(&client.Options{
-		BaseURL: "http://localhost:62770", // Default to ActionMCP port
+		BaseURL: "http://194.35.120.23:3001/mcp", // Default to ActionMCP port
 		Headers: map[string]string{
 			"User-Agent": "mcpgopher-example/1.0",
 		},
@@ -41,7 +41,7 @@ func main() {
 		fmt.Printf("Failed to initialize: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Connection initialized with protocol version 2025-03-26. Session ID: %s\n", mcp.GetSessionID())
+	fmt.Printf("Connection initialized with protocol version 2025-06-18. Session ID: %s\n", mcp.GetSessionID())
 
 	// List available tools before ping
 	fmt.Println("Listing available tools...")

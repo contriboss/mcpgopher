@@ -11,7 +11,7 @@ import (
 
 // HTTPClient implements the Interface for MCP client over HTTP transport.
 // It implements the Model Context Protocol (MCP) client-side functionality.
-// See: http://spec.modelcontextprotocol.io/2025-03-26/
+// See: http://spec.modelcontextprotocol.io/2025-06-18/
 type HTTPClient struct {
 	transport transport.Interface
 	config    *Config
@@ -66,7 +66,7 @@ func NewHTTPClient(options *Options) (*HTTPClient, error) {
 	defer cancel()
 
 	// Determine protocol version, clientInfo, and capabilities
-	protocolVersion := "2025-03-26"
+	protocolVersion := "2025-06-18"
 	if client.config != nil && client.config.Options != nil && client.config.Options.ProtocolVersion != "" {
 		protocolVersion = client.config.Options.ProtocolVersion
 	}
@@ -85,7 +85,7 @@ func NewHTTPClient(options *Options) (*HTTPClient, error) {
 
 // Initialize initializes the client with the server using the transport's Initialize method.
 func (c *HTTPClient) Initialize(ctx context.Context) error {
-	protocolVersion := "2025-03-26"
+	protocolVersion := "2025-06-18"
 	if c.config != nil && c.config.Options != nil && c.config.Options.ProtocolVersion != "" {
 		protocolVersion = c.config.Options.ProtocolVersion
 	}
@@ -98,26 +98,26 @@ func (c *HTTPClient) Initialize(ctx context.Context) error {
 }
 
 // Close closes the client connection and ends the session with the server.
-// See: http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#shutdown
+// See: http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#shutdown
 func (c *HTTPClient) Close() error {
 	return c.transport.Close()
 }
 
 // SetNotificationHandler sets a handler for server notifications.
 // Notifications are one-way messages from the server that don't expect a response.
-// See: http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#notifications
+// See: http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#notifications
 func (c *HTTPClient) SetNotificationHandler(handler func(method string, params map[string]interface{})) {
 	c.notificationHandler = handler
 }
 
 // Request makes a request to the server with custom parameters.
 // This is the general-purpose method for sending any MCP method to the server.
-// See: http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#requests-and-responses
+// See: http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#requests-and-responses
 func (c *HTTPClient) Request(ctx context.Context, method string, params interface{}) ([]byte, error) {
 	// Ensure initialize always sends required params
 	if method == "initialize" {
 		if params == nil {
-			protocolVersion := "2025-03-26"
+			protocolVersion := "2025-06-18"
 			if c.config != nil && c.config.Options != nil && c.config.Options.ProtocolVersion != "" {
 				protocolVersion = c.config.Options.ProtocolVersion
 			}
@@ -165,7 +165,7 @@ func (c *HTTPClient) GetSessionID() string {
 
 // Ping sends a ping request to the server and waits for a response.
 // It returns an error if the ping fails.
-// See: http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#ping
+// See: http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#ping
 func (c *HTTPClient) Ping(ctx context.Context) error {
 	return c.transport.Ping(ctx)
 }

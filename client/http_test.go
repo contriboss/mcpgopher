@@ -10,7 +10,7 @@ func TestHTTPClient(t *testing.T) {
 	client, err := NewHTTPClient(&Options{
 		BaseURL:         "http://localhost:62770",
 		Debug:           true,
-		ProtocolVersion: "2025-03-26",
+		ProtocolVersion: "2025-06-18",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)

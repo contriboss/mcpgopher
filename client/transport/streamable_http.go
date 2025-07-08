@@ -40,14 +40,14 @@ func WithHTTPTimeout(timeout time.Duration) StreamableHTTPCOption {
 // The HTTP response body can either be a single JSON-RPC response,
 // or an upgraded SSE stream that concludes with a JSON-RPC response for the same request.
 //
-// http://spec.modelcontextprotocol.io/2025-03-26/base-protocol
+// http://spec.modelcontextprotocol.io/2025-06-18/base-protocol
 //
 // The current implementation does not support the following features:
 //   - batching
 //   - continuously listening for server notifications when no request is in flight
-//     (http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#transport)
+//     (http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#transport)
 //   - resuming stream
-//     (http://spec.modelcontextprotocol.io/2025-03-26/base-protocol#transport)
+//     (http://spec.modelcontextprotocol.io/2025-06-18/base-protocol#transport)
 //   - server -> client request
 type StreamableHTTP struct {
 	baseURL    *url.URL
@@ -244,12 +244,12 @@ func (c *StreamableHTTP) SendRequest(
 	case "application/json":
 		// Single response
 		body, _ := io.ReadAll(resp.Body)
-		
+
 		// Log the raw response for debugging if it's a ping
 		if request.Method == "ping" {
 			fmt.Printf("DEBUG Raw response: %s\n", string(body))
 		}
-		
+
 		var response JSONRPCResponse
 		if err := json.Unmarshal(body, &response); err != nil {
 			return nil, fmt.Errorf("failed to decode response: %w\nRaw payload: %s", err, string(body))
@@ -451,11 +451,11 @@ func (c *StreamableHTTP) Ping(ctx context.Context) error {
 	pingParams := map[string]interface{}{
 		"timestamp": time.Now().UnixNano(),
 	}
-	
+
 	// Create request ID for ping
 	requestID := fmt.Sprintf("ping-%d", time.Now().UnixNano())
 	fmt.Printf("DEBUG: Using request ID: %s\n", requestID)
-	
+
 	// Try using SendRequest instead of direct HTTP request
 	request := JSONRPCRequest{
 		JSONRPC: "2.0",
@@ -463,21 +463,21 @@ func (c *StreamableHTTP) Ping(ctx context.Context) error {
 		Method:  "ping",
 		Params:  pingParams,
 	}
-	
+
 	// Marshal request for logging
 	requestBody, _ := json.Marshal(request)
 	fmt.Printf("DEBUG: Sending ping request: %s\n", string(requestBody))
-	
+
 	// Send the ping request
 	resp, err := c.SendRequest(ctx, request)
 	if err != nil {
 		fmt.Printf("DEBUG: Ping error: %v\n", err)
 		return fmt.Errorf("ping failed: %w", err)
 	}
-	
+
 	// Log response
 	respJSON, _ := json.Marshal(resp)
 	fmt.Printf("DEBUG: Ping response: %s\n", string(respJSON))
-	
+
 	return nil
 }
