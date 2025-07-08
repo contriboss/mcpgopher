@@ -13,91 +13,91 @@ type MCPMethod string
 
 const (
 	// MethodInitialize negotiates protocol capabilities and version
-	// https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle/#initialization
+	// https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle/#initialization
 	MethodInitialize MCPMethod = "initialize"
 
 	// MethodPing validates connection liveness
-	// https://modelcontextprotocol.io/specification/2025-03-26/basic/utilities/ping
+	// https://modelcontextprotocol.io/specification/2025-06-18/basic/utilities/ping
 	MethodPing MCPMethod = "ping"
 
 	// MethodResourcesList retrieves available server resources
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/resources
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/resources
 	MethodResourcesList MCPMethod = "resources/list"
 
 	// MethodResourcesTemplatesList retrieves URI templates for resource construction
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/resources
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/resources
 	MethodResourcesTemplatesList MCPMethod = "resources/templates/list"
 
 	// MethodResourcesRead fetches specific resource content
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/resources
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/resources
 	MethodResourcesRead MCPMethod = "resources/read"
 
 	// MethodPromptsList retrieves available prompt templates
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/prompts
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
 	MethodPromptsList MCPMethod = "prompts/list"
 
 	// MethodPromptsGet fetches prompt with filled arguments
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/prompts
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
 	MethodPromptsGet MCPMethod = "prompts/get"
 
 	// MethodToolsList retrieves available executable tools
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/tools
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/tools
 	MethodToolsList MCPMethod = "tools/list"
 
 	// MethodToolsCall executes a tool with provided arguments
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/tools
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/tools
 	MethodToolsCall MCPMethod = "tools/call"
 
 	// MethodCompleteList provides argument completion suggestions
-	// https://modelcontextprotocol.io/specification/2025-03-26/utilities/completion
+	// https://modelcontextprotocol.io/specification/2025-06-18/utilities/completion
 	MethodCompleteList MCPMethod = "completion/complete"
 
 	// MethodLoggingSetLevel adjusts server logging verbosity
-	// https://modelcontextprotocol.io/specification/2025-03-26/utilities/logging
+	// https://modelcontextprotocol.io/specification/2025-06-18/utilities/logging
 	MethodLoggingSetLevel MCPMethod = "logging/setLevel"
 
 	// MethodRootsList retrieves available file system roots
-	// https://modelcontextprotocol.io/specification/2025-03-26/client/roots
+	// https://modelcontextprotocol.io/specification/2025-06-18/client/roots
 	MethodRootsList MCPMethod = "roots/list"
 
 	// MethodSamplingCreateMessage requests LLM sampling via client
-	// https://modelcontextprotocol.io/specification/2025-03-26/client/sampling
+	// https://modelcontextprotocol.io/specification/2025-06-18/client/sampling
 	MethodSamplingCreateMessage MCPMethod = "sampling/createMessage"
 
 	// MethodNotificationInitialized confirms initialization complete
-	// https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle
+	// https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle
 	MethodNotificationInitialized MCPMethod = "notifications/initialized"
 
 	// MethodNotificationCancelled indicates request cancellation
-	// https://modelcontextprotocol.io/specification/2025-03-26/basic/cancellation
+	// https://modelcontextprotocol.io/specification/2025-06-18/basic/cancellation
 	MethodNotificationCancelled MCPMethod = "notifications/cancelled"
 
 	// MethodNotificationProgress provides operation progress updates
-	// https://modelcontextprotocol.io/specification/2025-03-26/basic/progress
+	// https://modelcontextprotocol.io/specification/2025-06-18/basic/progress
 	MethodNotificationProgress MCPMethod = "notifications/progress"
 
 	// MethodNotificationResourcesListChanged signals resource list changes
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/resources#list-changed-notification
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#list-changed-notification
 	MethodNotificationResourcesListChanged MCPMethod = "notifications/resources/list_changed"
 
 	// MethodNotificationResourceUpdated signals specific resource changes
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/resources#updated-notification
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#updated-notification
 	MethodNotificationResourceUpdated MCPMethod = "notifications/resources/updated"
 
 	// MethodNotificationPromptsListChanged signals prompt list changes
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/prompts#list-changed-notification
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#list-changed-notification
 	MethodNotificationPromptsListChanged MCPMethod = "notifications/prompts/list_changed"
 
 	// MethodNotificationToolsListChanged signals tool list changes
-	// https://modelcontextprotocol.io/specification/2025-03-26/server/tools#list-changed-notification
+	// https://modelcontextprotocol.io/specification/2025-06-18/server/tools#list-changed-notification
 	MethodNotificationToolsListChanged MCPMethod = "notifications/tools/list_changed"
 
 	// MethodNotificationLoggingMessage transmits log entries
-	// https://modelcontextprotocol.io/specification/2025-03-26/utilities/logging
+	// https://modelcontextprotocol.io/specification/2025-06-18/utilities/logging
 	MethodNotificationLoggingMessage MCPMethod = "notifications/logging/message"
 
 	// MethodNotificationRootsListChanged signals root list changes
-	// https://modelcontextprotocol.io/specification/2025-03-26/client/roots
+	// https://modelcontextprotocol.io/specification/2025-06-18/client/roots
 	MethodNotificationRootsListChanged MCPMethod = "notifications/roots/list_changed"
 )
 
@@ -126,7 +126,7 @@ func (t *URITemplate) UnmarshalJSON(data []byte) error {
 /* Constants */
 
 // LATEST_PROTOCOL_VERSION defines the current MCP protocol version
-const LATEST_PROTOCOL_VERSION = "2025-03-26"
+const LATEST_PROTOCOL_VERSION = "2025-06-18"
 
 // JSONRPC_VERSION specifies the JSON-RPC version used by MCP
 const JSONRPC_VERSION = "2.0"
