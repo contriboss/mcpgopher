@@ -1,0 +1,37 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+
+  enable:
+    - gosec
+    - goconst
+    - noctx
+    - staticcheck
+    - whitespace
+    - govet
+
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - path: _test\.go$
+        linters:
+          - goconst
+
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gosec:
+      excludes:
+        - G404
+
+formatters:
+  enable:
+    - goimports
+    - gofmt

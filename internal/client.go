@@ -3,14 +3,15 @@ package internal
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/oklog/ulid"
 	"io"
-	"math/rand"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/oklog/ulid/v2"
 )
 
 type MCPClient struct {
@@ -45,9 +46,10 @@ func (c *MCPClient) GetSessionID() string {
 	return c.sessionID
 }
 
+var idEntropy = ulid.Monotonic(rand.Reader, 0)
+
 func generateId() string {
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
-	return ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String()
+	return ulid.MustNew(ulid.Timestamp(time.Now()), idEntropy).String()
 }
 
 func (c *MCPClient) GenerateSessionID() string {
@@ -90,7 +92,7 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", c.baseURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -112,7 +114,11 @@ func (c *MCPClient) sendRequest(method string, params interface{}) (*JSONRPCMess
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close request body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
@@ -158,7 +164,7 @@ func (c *MCPClient) sendNotification(method string, params interface{}) error {
 		return fmt.Errorf("failed to marshal notification: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", c.baseURL, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", c.baseURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -179,7 +185,11 @@ func (c *MCPClient) sendNotification(method string, params interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to send notification: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close request body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
@@ -596,21 +606,8 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func intPtr(i int) *int {
-	return &i
-}
-
 func Float64Ptr(f float64) *float64 {
 	return &f
-}
-
-func stringPtr(s string) *string {
-	return &s
-}
-
-func cursorPtr(c string) *Cursor {
-	cursor := Cursor(c)
-	return &cursor
 }
 
 // Advanced HTTP client features

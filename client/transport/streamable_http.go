@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"mime"
 	"net/http"
 	"net/url"
@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/oklog/ulid"
+	"github.com/oklog/ulid/v2"
 )
 
 type StreamableHTTPCOption func(*StreamableHTTP)
@@ -96,7 +96,7 @@ func (c *StreamableHTTP) Start(ctx context.Context) error {
 // Stores the session ID if successful.
 func (c *StreamableHTTP) Initialize(ctx context.Context, protocolVersion string, clientInfo map[string]interface{}, capabilities map[string]interface{}) error {
 	request := JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: jsonRPCVersion,
 		ID:      "1",
 		Method:  initializeMethod,
 		Params: map[string]interface{}{
@@ -147,7 +147,11 @@ func (c *StreamableHTTP) Close() error {
 				fmt.Printf("failed to send close request\n: %v", err)
 				return
 			}
-			res.Body.Close()
+			defer func() {
+				if err := res.Body.Close(); err != nil {
+					fmt.Printf("failed to close response body: %v\n", err)
+				}
+			}()
 		}()
 	}
 
@@ -159,6 +163,11 @@ const (
 	headerKeySessionID = "Mcp-Session-Id"
 )
 
+const (
+	jsonRPCVersion = "2.0"
+	methodPing     = "ping"
+)
+
 // SendRequest sends a JSON-RPC request to the server and waits for a response.
 // Returns the raw JSON response message or an error if the request fails.
 func (c *StreamableHTTP) SendRequest(
@@ -166,7 +175,7 @@ func (c *StreamableHTTP) SendRequest(
 	request JSONRPCRequest,
 ) (*JSONRPCResponse, error) {
 	// Print debug info for ping requests
-	if request.Method == "ping" {
+	if request.Method == methodPing {
 		fmt.Printf("DEBUG SendRequest: Method=%s, ID=%s\n", request.Method, request.ID)
 	}
 
@@ -211,7 +220,11 @@ func (c *StreamableHTTP) SendRequest(
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close resquest body: %v\n", err)
+		}
+	}()
 
 	// Check if we got an error response
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
@@ -246,7 +259,7 @@ func (c *StreamableHTTP) SendRequest(
 		body, _ := io.ReadAll(resp.Body)
 
 		// Log the raw response for debugging if it's a ping
-		if request.Method == "ping" {
+		if request.Method == methodPing {
 			fmt.Printf("DEBUG Raw response: %s\n", string(body))
 		}
 
@@ -256,7 +269,7 @@ func (c *StreamableHTTP) SendRequest(
 		}
 
 		// Special handling for ping requests - allow null ID
-		if response.ID == nil && request.Method != "ping" {
+		if response.ID == nil && request.Method != methodPing {
 			return nil, fmt.Errorf("response should contain RPC id. Raw payload: %s", string(body))
 		}
 
@@ -272,9 +285,10 @@ func (c *StreamableHTTP) SendRequest(
 }
 
 func (c *StreamableHTTP) Request(ctx context.Context, method string, params interface{}) (*JSONRPCResponse, error) {
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
+	entropy := ulid.Monotonic(rand.Reader, 0) // ← secure + monotonic
+
 	request := JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: jsonRPCVersion,
 		ID:      ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String(),
 		Method:  method,
 		Params:  params,
@@ -286,7 +300,6 @@ func (c *StreamableHTTP) Request(ctx context.Context, method string, params inte
 // handleSSEResponse processes an SSE stream for a specific request.
 // It returns the final result for the request once received, or an error.
 func (c *StreamableHTTP) handleSSEResponse(ctx context.Context, reader io.ReadCloser) (*JSONRPCResponse, error) {
-
 	// Create a channel for this specific request
 	responseChan := make(chan *JSONRPCResponse, 1)
 
@@ -299,9 +312,7 @@ func (c *StreamableHTTP) handleSSEResponse(ctx context.Context, reader io.ReadCl
 		defer close(responseChan)
 
 		c.readSSE(ctx, reader, func(event, data string) {
-
 			// (unsupported: batching)
-
 			var message JSONRPCResponse
 			if err := json.Unmarshal([]byte(data), &message); err != nil {
 				fmt.Printf("failed to unmarshal message: %v\n", err)
@@ -342,7 +353,11 @@ func (c *StreamableHTTP) handleSSEResponse(ctx context.Context, reader io.ReadCl
 // readSSE reads the SSE stream(reader) and calls the handler for each event and data pair.
 // It will end when the reader is closed (or the context is done).
 func (c *StreamableHTTP) readSSE(ctx context.Context, reader io.ReadCloser, handler func(event, data string)) {
-	defer reader.Close()
+	defer func() {
+		if err := reader.Close(); err != nil {
+			fmt.Printf("failed to close SSE reader: %v\n", err)
+		}
+	}()
 
 	br := bufio.NewReader(reader)
 	var event, data string
@@ -392,7 +407,6 @@ func (c *StreamableHTTP) readSSE(ctx context.Context, reader io.ReadCloser, hand
 }
 
 func (c *StreamableHTTP) SendNotification(ctx context.Context, notification JSONRPCNotification) error {
-
 	// Marshal request
 	requestBody, err := json.Marshal(notification)
 	if err != nil {
@@ -420,15 +434,15 @@ func (c *StreamableHTTP) SendNotification(ctx context.Context, notification JSON
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close request body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf(
-			"notification failed with status %d: %s",
-			resp.StatusCode,
-			body,
-		)
+		return fmt.Errorf("notification failed with status %d: %s", resp.StatusCode, body)
 	}
 
 	return nil
@@ -458,9 +472,9 @@ func (c *StreamableHTTP) Ping(ctx context.Context) error {
 
 	// Try using SendRequest instead of direct HTTP request
 	request := JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: jsonRPCVersion,
 		ID:      requestID,
-		Method:  "ping",
+		Method:  methodPing,
 		Params:  pingParams,
 	}
 
