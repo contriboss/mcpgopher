@@ -15,15 +15,17 @@ func TestHTTPClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
-
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Failed to close client: %v", err)
+		}
+	}()
 	// Test Initialize
 	ctx := context.Background()
 	err = client.Initialize(ctx)
 	if err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
-
 }
 
 func TestProtocolVersionSentCorrectly(t *testing.T) {
@@ -35,7 +37,11 @@ func TestProtocolVersionSentCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Failed to close client: %v", err)
+		}
+	}()
 
 	// Test Initialize
 	ctx := context.Background()
@@ -54,7 +60,11 @@ func TestPing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Failed to close client: %v", err)
+		}
+	}()
 
 	// Initialize first
 	ctx := context.Background()

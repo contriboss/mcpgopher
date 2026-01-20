@@ -19,6 +19,11 @@ type HTTPClient struct {
 	notificationHandler func(method string, params map[string]interface{})
 }
 
+const (
+	ProtocolVersion = "2025-06-18"
+	JSONRPCVersion  = "2.0"
+)
+
 // NewHTTPClient creates a new HTTP client
 func NewHTTPClient(options *Options) (*HTTPClient, error) {
 	if options == nil {
@@ -66,7 +71,7 @@ func NewHTTPClient(options *Options) (*HTTPClient, error) {
 	defer cancel()
 
 	// Determine protocol version, clientInfo, and capabilities
-	protocolVersion := "2025-06-18"
+	protocolVersion := ProtocolVersion
 	if client.config != nil && client.config.Options != nil && client.config.Options.ProtocolVersion != "" {
 		protocolVersion = client.config.Options.ProtocolVersion
 	}
@@ -85,7 +90,7 @@ func NewHTTPClient(options *Options) (*HTTPClient, error) {
 
 // Initialize initializes the client with the server using the transport's Initialize method.
 func (c *HTTPClient) Initialize(ctx context.Context) error {
-	protocolVersion := "2025-06-18"
+	protocolVersion := ProtocolVersion
 	if c.config != nil && c.config.Options != nil && c.config.Options.ProtocolVersion != "" {
 		protocolVersion = c.config.Options.ProtocolVersion
 	}
@@ -117,7 +122,7 @@ func (c *HTTPClient) Request(ctx context.Context, method string, params interfac
 	// Ensure initialize always sends required params
 	if method == "initialize" {
 		if params == nil {
-			protocolVersion := "2025-06-18"
+			protocolVersion := ProtocolVersion
 			if c.config != nil && c.config.Options != nil && c.config.Options.ProtocolVersion != "" {
 				protocolVersion = c.config.Options.ProtocolVersion
 			}
@@ -135,7 +140,7 @@ func (c *HTTPClient) Request(ctx context.Context, method string, params interfac
 
 	// Create the JSONRPC request
 	request := transport.JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      fmt.Sprintf("%d", time.Now().UnixNano()),
 		Method:  method,
 		Params:  params,
@@ -173,7 +178,7 @@ func (c *HTTPClient) Ping(ctx context.Context) error {
 // RawRequest sends a request and returns the full JSON-RPC envelope as bytes.
 func (c *HTTPClient) RawRequest(ctx context.Context, method string, params interface{}) ([]byte, error) {
 	request := transport.JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: JSONRPCVersion,
 		ID:      fmt.Sprintf("%d", time.Now().UnixNano()),
 		Method:  method,
 		Params:  params,

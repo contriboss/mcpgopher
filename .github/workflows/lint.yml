@@ -15,25 +15,26 @@ on:
       - "**/*.go"
       - .golangci.yml
 
-concurrency: # kill stale lint runs on the same PR
-  group: ${{ github.workflow }}‑${{ github.ref }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
+  golangci-lint:
+    name: golangci-lint
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
 
-      # The official action handles download, cache, and annotations
-      - uses: golangci/golangci-lint-action@v8
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
         with:
+          version: v2.8
           args: --timeout 5m
-          only-new-issues: true

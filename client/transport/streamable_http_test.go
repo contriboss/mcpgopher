@@ -39,7 +39,7 @@ func startMockStreamableHTTPServer() (string, func()) {
 
 		method := request["method"]
 		switch method {
-		case "initialize":
+		case initializeMethod:
 			// Generate a new session ID
 			mu.Lock()
 			sessionID = fmt.Sprintf("test-session-%d", time.Now().UnixNano())
@@ -48,7 +48,7 @@ func startMockStreamableHTTPServer() (string, func()) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
 			if err := json.NewEncoder(w).Encode(map[string]any{
-				"jsonrpc": "2.0",
+				"jsonrpc": jsonRPCVersion,
 				"id":      request["id"],
 				"result":  "initialized",
 			}); err != nil {
@@ -56,7 +56,7 @@ func startMockStreamableHTTPServer() (string, func()) {
 				return
 			}
 
-		case "ping":
+		case methodPing:
 			// Check session ID
 			if r.Header.Get("Mcp-Session-Id") != sessionID {
 				http.Error(w, "Invalid session ID", http.StatusNotFound)
@@ -66,7 +66,7 @@ func startMockStreamableHTTPServer() (string, func()) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			if err := json.NewEncoder(w).Encode(map[string]any{
-				"jsonrpc": "2.0",
+				"jsonrpc": jsonRPCVersion,
 				"id":      request["id"],
 				"result":  request,
 			}); err != nil {
@@ -84,7 +84,7 @@ func startMockStreamableHTTPServer() (string, func()) {
 			w.WriteHeader(http.StatusOK)
 			data, _ := json.Marshal(request)
 			if err := json.NewEncoder(w).Encode(map[string]any{
-				"jsonrpc": "2.0",
+				"jsonrpc": jsonRPCVersion,
 				"id":      request["id"],
 				"error": map[string]any{
 					"code":    -1,
@@ -112,16 +112,20 @@ func TestStreamableHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer trans.Close()
+	defer func() {
+		if err := trans.Close(); err != nil {
+			t.Errorf("failed to close the tranport: %v\n", err)
+		}
+	}()
 
 	// Initialize the transport first
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	initRequest := JSONRPCRequest{
-		JSONRPC: "2.0",
+		JSONRPC: jsonRPCVersion,
 		ID:      "1",
-		Method:  "initialize",
+		Method:  initializeMethod,
 	}
 
 	_, err = trans.SendRequest(ctx, initRequest)
@@ -135,9 +139,9 @@ func TestStreamableHTTP(t *testing.T) {
 		defer cancel()
 
 		request := JSONRPCRequest{
-			JSONRPC: "2.0",
+			JSONRPC: jsonRPCVersion,
 			ID:      "1",
-			Method:  "ping",
+			Method:  methodPing,
 			Params: map[string]any{
 				"string": "hello world",
 				"array":  []any{1, 2, 3},
@@ -163,7 +167,7 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 
 		// Verify response data matches what was sent
-		if result.JSONRPC != "2.0" {
+		if result.JSONRPC != jsonRPCVersion {
 			t.Errorf("Expected JSONRPC value '2.0', got '%s'", result.JSONRPC)
 		}
 		if result.ID != "1" {
@@ -189,7 +193,7 @@ func TestStreamableHTTP(t *testing.T) {
 
 		// Prepare a request
 		request := JSONRPCRequest{
-			JSONRPC: "2.0",
+			JSONRPC: jsonRPCVersion,
 			ID:      "2",
 			Method:  "ping",
 			Params:  map[string]any{"string": "timeout"},
@@ -214,7 +218,7 @@ func TestStreamableHTTP(t *testing.T) {
 
 		// Expected notification data
 		expectedID := "42"
-		expectedJSONRPC := "2.0"
+		expectedJSONRPC := jsonRPCVersion
 		expectedMethod := "notifications/test"
 
 		// Create a notification payload
@@ -257,7 +261,6 @@ func TestStreamableHTTP(t *testing.T) {
 				if got["id"] != expectedID ||
 					got["jsonrpc"] != expectedJSONRPC ||
 					got["method"] != expectedMethod {
-
 					responseJson, _ := json.Marshal(got)
 					expectedJson, _ := json.Marshal(map[string]string{
 						"id":      expectedID,
@@ -293,9 +296,9 @@ func TestStreamableHTTP(t *testing.T) {
 
 				// Each request has a unique ID and payload
 				request := JSONRPCRequest{
-					JSONRPC: "2.0",
+					JSONRPC: jsonRPCVersion,
 					ID:      fmt.Sprintf("%d", 100+idx),
-					Method:  "ping",
+					Method:  methodPing,
 					Params:  map[string]any{"requestIndex": idx},
 				}
 
@@ -353,7 +356,7 @@ func TestStreamableHTTP(t *testing.T) {
 		// Prepare a request
 		requestID := "999"
 		request := JSONRPCRequest{
-			JSONRPC: "2.0",
+			JSONRPC: jsonRPCVersion,
 			ID:      requestID,
 			Method:  "ping_error",
 			Params:  map[string]any{"foo": "bar"},
@@ -404,7 +407,7 @@ func TestStreamableHTTPErrors(t *testing.T) {
 		defer cancel()
 
 		request := JSONRPCRequest{
-			JSONRPC: "2.0",
+			JSONRPC: jsonRPCVersion,
 			ID:      "1",
 			Method:  "initialize",
 		}

@@ -28,7 +28,11 @@ func main() {
 		fmt.Printf("Failed to create client: %v\n", err)
 		os.Exit(1)
 	}
-	defer mcp.Close()
+	defer func() {
+		if err := mcp.Close(); err != nil {
+			fmt.Printf("Failed to close client: %v\n", err)
+		}
+	}()
 	ddd := mcp.GetSessionID()
 	fmt.Println(ddd)
 	// Create a context with timeout
@@ -71,7 +75,9 @@ func main() {
 		fmt.Printf("Ping request failed: %v\n", err)
 	} else {
 		var prettyJSON map[string]interface{}
-		json.Unmarshal(result, &prettyJSON)
+		if err := json.Unmarshal(result, &prettyJSON); err != nil {
+			fmt.Printf("Failed to unmarshal: %v\n", err)
+		}
 		jsonStr, _ := json.MarshalIndent(prettyJSON, "", "  ")
 		fmt.Printf("Ping response: %s\n", jsonStr)
 	}
@@ -82,6 +88,10 @@ func main() {
 			"company_name": "ad blue",
 		},
 	})
+
+	if err != nil {
+		fmt.Printf("RawRequest failed: %v", err)
+	}
 
 	fmt.Println(string(result))
 
